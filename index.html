@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ScrumSage - AI for Agile Workflows</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- SheetJS for Excel parsing -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <style>
+        /* Custom styles for modal backdrop */
+        .modal-backdrop {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 10;
+        }
+        .modal {
+            display: none;
+            position: fixed !important;
+            top: 60%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 20;
+        }
+        .modal.active, .modal-backdrop.active {
+            display: block;
+        }
+
+        .close-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            cursor: pointer;
+            font-size: 1.5rem;
+        }
+        .error-message {
+            color: red;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+            display: none;
+        }
+        /* Add to your existing styles */
+        #alertModal {
+            display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 30;
+        }
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            background: white; /* Ensures background is visible */
+            z-index: 1000; /* Ensures it stays above other elements */
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Optional: Adds a slight shadow */
+        }
+        body {
+        padding-top: 60px; /* Prevents content from hiding behind the fixed header */
+        }
+    </style></head>
+<body class="font-sans text-gray-800" background="./background2.svg"></body>
+    <!-- Header -->
+
+      <header class="flex justify-between items-center p-4 border-b">
+        <div class="flex flex-col">
+          <!-- Main title -->
+          <div class="text-2xl font-bold text-purple-600">StandUpLens</div>
+          
+          <!-- Subtitle with upward adjustment -->
+          <div class="flex justify-end -mt-1">  
+            <span class="text-sm font-medium text-gray-600">& MeetingPilot</span>
+          </div>
+        </div>
+      </header>
+
+    <!-- Hero Section -->
+    <section class="text-center py-16">
+        <h2 class="text-5xl font-bold leading-tight">
+            AI runs your stand-ups and analyzes your meetings,<br>So You Don’t Have To.
+        </h2>
+        <p class="text-gray-500 mt-4">
+            Your meetings, AI-fied and amplified. Step aside, AI’s here to vibe.
+        </p>
+        <button id="createMeetingBtn" class="mt-6 px-6 py-2 bg-purple-600 text-white rounded-full hover:bg-purple-700">
+            Run Stand-Up with AI
+        </button>
+        <div class="mt-8 max-w-4xl mx-auto">
+            <img src="./meeting_room.png" alt="Meeting Room" class="w-full h-64 object-cover rounded-lg">
+        </div>
+    </section>
+
+    <!-- Modal Backdrop -->
+    <div id="modalBackdrop" class="modal-backdrop"></div>
+
+    <!-- Modal for Creating a New Meeting -->
+    <div id="createMeetingModal" class="modal bg-white p-6 rounded-lg shadow-lg w-full max-w-lg relative">
+        <span id="closeCreateMeetingModalBtn" class="close-btn">✖</span>
+        <h2 class="text-2xl font-bold mb-4">Configure Your AI Scrum Master</h2>
+        <form id="createMeetingForm">
+            <div class="mb-4">
+                <label class="block text-gray-700 mb-2">Meeting Code</label>
+                <input type="text" name="meetingId" placeholder="Enter meeting code (e.g., zpf-nfic-hjv)" class="w-full p-2 border rounded" required>
+                <p class="error-message" id="meetingIdError">Meeting code is required.</p>
+            </div>
+            <div class="mb-4">
+                <label class="block text-gray-700 mb-2">Manager Details</label>
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <input type="text" name="managerName" placeholder="Enter name" class="w-full p-2 border rounded" required>
+                        <p class="error-message" id="managerNameError">Manager name is required.</p>
+                    </div>
+                    <div>
+                        <input type="email" name="managerEmail" placeholder="Enter email" class="w-full p-2 border rounded" required>
+                        <p class="error-message" id="managerEmailError">Email is required.</p>
+                    </div>
+                </div>
+            </div>
+            <div class="mb-4">
+                <div class="flex justify-between items-center mb-4">
+                    <label class="block text-gray-700">Participants</label>
+                    <button type="button" onclick="importParticipants()" class="bg-purple-600 text-white px-4 py-2 rounded-full hover:bg-purple-700">Import from Excel</button>
+                </div>
+                <div id="participantsContainer">
+                </div>
+            </div>
+            <button type="button" id="addParticipantBtn" class="text-purple-600 mb-4">+ Add Participant</button>
+            <div class="text-right">
+                <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded w-full hover:bg-purple-700">Start Stand-Up Session</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Modal for Sign In -->
+    <div id="signInModal" class="modal bg-white p-6 rounded-lg shadow-lg w-full max-w-lg relative">
+        <span id="closeSignInModalBtn" class="close-btn">✖</span>
+        <h2 class="text-2xl font-bold mb-4">Sign In</h2>
+        <form id="signInForm">
+            <div class="mb-4">
+                <label class="block text-gray-700 mb-2">Email</label>
+                <input type="email" name="email" placeholder="Enter email" class="w-full p-2 border rounded" required>
+                <p class="error-message" id="signInEmailError">Email is required.</p>
+            </div>
+            <div class="mb-4">
+                <label class="block text-gray-700 mb-2">Password</label>
+                <input type="password" name="password" placeholder="Enter password" class="w-full p-2 border rounded" required>
+                <p class="error-message" id="signInPasswordError">Password is required.</p>
+            </div>
+            <div class="text-right">
+                <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded w-full hover:bg-purple-700">Sign In</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Transform Section -->
+    <section class="py-16 flex flex-col md:flex-row items-center max-w-5xl mx-auto">
+        <div class="md:w-1/2">
+            <h2 class="text-3xl font-bold mb-4">Transform Your Agile Workflow</h2>
+            <ul class="space-y-2">
+                <li class="flex items-center">
+                    <span class="text-purple-600 pl-4 mr-2">🎙️</span> Real-time Speech Recognition<br>Captures every word through advanced speech-to-text technology
+                </li>
+                <li class="flex items-center">
+                    <span class="text-purple-600 pl-4 mr-2">🤖</span> AI-Powered Insights<br>Smart analysis of team trends and performance metrics
+                </li>
+                <li class="flex items-center">
+                    <span class="text-purple-600 pl-4 mr-2">📝</span> Automated Documentation<br>Instant summaries and PowerPoint generation
+                </li>
+            </ul>
+        </div>
+        <div class="md:w-1/2 mt-6 md:mt-0">
+            <img src="./robut_analytics.png" alt="Robot Analytics" class="w-full h-64 object-cover rounded-lg">
+        </div>
+    </section>
+
+    <!-- Features Section (Future Developments) -->
+    <section class="py-16">
+        <h2 class="text-4xl font-bold text-center mb-4">Evolving Agile Intelligence</h2>
+        <p class="text-center text-gray-500 mb-8">The future of Agile meetings is here, and it’s getting smarter every day.</p>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
+            <div class="p-6 bg-white rounded-lg shadow-md">
+                <div class="text-purple-600 text-3xl mb-4">🤖</div>
+                <h3 class="text-xl font-semibold mb-2">Smart Chatbot Integration</h3>
+                <p class="text-gray-600">Access past stand-ups and get instant insights through the AI-powered chatbot.</p>
+            </div>
+            <div class="p-6 bg-white rounded-lg shadow-md">
+                <div class="text-purple-600 text-3xl mb-4">🛠️</div>
+                <h3 class="text-xl font-semibold mb-2">Seamless Integration</h3>
+                <p class="text-gray-600">Direct sync with Jira and ServiceNow for real-time task tracking and updates.</p>
+            </div>
+            <div class="p-6 bg-white rounded-lg shadow-md">
+                <div class="text-purple-600 text-3xl mb-4">📈</div>
+                <h3 class="text-xl font-semibold mb-2">Predictive Analytics</h3>
+                <p class="text-gray-600">Data-driven insights to predict and prevent team bottlenecks before they occur.</p>
+            </div>
+        </div>
+    </section>
+
+    <!-- Custom Alert Modal -->
+    <div id="alertModal" class="modal bg-white p-6 rounded-lg shadow-lg w-full max-w-md relative">
+        <div class="flex justify-between items-center mb-4">
+            <h3 id="alertTitle" class="text-xl font-bold">Alert</h3>
+            <span id="closeAlertBtn" class="close-btn">✖</span>
+        </div>
+        <p id="alertMessage">Message goes here</p>
+        <div class="mt-4 text-right">
+            <button id="confirmAlertBtn" class="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">OK</button>
+        </div>
+    </div>
+
+    <!-- JavaScript Reference -->
+    <script src="scripts.js"></script>
+</body>
+</html>
