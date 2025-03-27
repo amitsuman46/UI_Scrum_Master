@@ -241,7 +241,7 @@ createMeetingForm.addEventListener('submit', async (e) => {
         const timeoutId = setTimeout(() => controller.abort(), timeout);
 
         // Make the fetch request
-        const response = await fetch('http://20.197.38.23:7700/gmeet/standup', {
+        const response = await fetch('https://20.197.38.23/gmeet/standup', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
