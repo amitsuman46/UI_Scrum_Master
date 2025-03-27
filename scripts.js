@@ -31,7 +31,7 @@ createMeetingBtn.addEventListener('click', () => {
 });
 
 // Close Create Meeting Modal
-closeCreateMeetingModalBtn.addEventListener('click', (e)=>{
+closeCreateMeetingModalBtn.addEventListener('click', (e) => {
     e.preventDefault();
     closeAllModals();
     clearFormFields();
@@ -57,7 +57,7 @@ modalBackdrop.addEventListener('click', closeAllModals);
 //     newParticipantRow.classList.add('participant-row', 'grid', 'grid-cols-3', 'gap-2', 'mb-2');
 //     newParticipantRow.innerHTML = `
 //         <div>
-//             <input type="text" name="participantName[]" placeholder="Assignee" class="w-full p-2 border rounded" required>
+//             <input type="text" name="participantName[]" placeholder="Assignee Name" class="w-full p-2 border rounded" required>
 //             <p class="error-message">Assignee is required.</p>
 //         </div>
 //         <div>
@@ -75,15 +75,11 @@ modalBackdrop.addEventListener('click', closeAllModals);
 addParticipantBtn.addEventListener('click', () => {
     const newParticipantRow = document.createElement('div');
     newParticipantRow.classList.add('participant-row', 'grid', 'grid-cols-12', 'gap-2', 'mb-2', 'items-center');
-    
+
     newParticipantRow.innerHTML = `
         <div class="col-span-4">
-            <input type="text" name="participantName[]" placeholder="Assignee" class="w-full p-2 border rounded" required>
+            <input type="text" name="participantName[]" placeholder="Assignee Name" class="w-full p-2 border rounded" required>
             <p class="error-message text-xs mt-1 hidden">Assignee is required.</p>
-        </div>
-        <div class="col-span-4">
-            <input type="email" name="participantEmail[]" placeholder="Email" class="w-full p-2 border rounded" required>
-            <p class="error-message text-xs mt-1 hidden">Email is required.</p>
         </div>
         <div class="col-span-3">
             <input type="text" name="participantTask[]" placeholder="Task" class="w-full p-2 border rounded" required>
@@ -97,9 +93,9 @@ addParticipantBtn.addEventListener('click', () => {
             </button>
         </div>
     `;
-    
+
     participantsContainer.appendChild(newParticipantRow);
-    
+
     // Add event listener to the new delete button
     newParticipantRow.querySelector('.delete-participant-btn').addEventListener('click', () => {
         newParticipantRow.remove();
@@ -154,12 +150,12 @@ function clearFormFields() {
     // Clear main meeting inputs
     createMeetingForm.querySelector('input[name="meetingId"]').value = '';
     createMeetingForm.querySelector('input[name="managerName"]').value = '';
-    createMeetingForm.querySelector('input[name="managerEmail"]').value = '';
+    //createMeetingForm.querySelector('input[name="managerEmail"]').value = '';
 
     // Clear participant fields
     participantsContainer.querySelectorAll('.participant-row').forEach(row => {
         row.querySelector('input[name="participantName[]"]').value = '';
-        row.querySelector('input[name="participantEmail[]"]').value = '';
+        //row.querySelector('input[name="participantEmail[]"]').value = '';
         row.querySelector('input[name="participantTask[]"]').value = '';
     });
 }
@@ -175,7 +171,7 @@ createMeetingForm.addEventListener('submit', async (e) => {
     let isValid = true;
     const meetingId = createMeetingForm.querySelector('input[name="meetingId"]').value;
     const managerName = createMeetingForm.querySelector('input[name="managerName"]').value;
-    const managerEmail = createMeetingForm.querySelector('input[name="managerEmail"]').value;
+    //const managerEmail = createMeetingForm.querySelector('input[name="managerEmail"]').value;
 
     if (!meetingId) {
         document.getElementById('meetingIdError').style.display = 'block';
@@ -185,20 +181,20 @@ createMeetingForm.addEventListener('submit', async (e) => {
         document.getElementById('managerNameError').style.display = 'block';
         isValid = false;
     }
-    if (!managerEmail) {
-        document.getElementById('managerEmailError').style.display = 'block';
-        isValid = false;
-    }
+    // if (!managerEmail) {
+    //     document.getElementById('managerEmailError').style.display = 'block';
+    //     isValid = false;
+    // }
 
     // Validate participants
     const participantRows = participantsContainer.querySelectorAll('.participant-row');
     participantRows.forEach(row => {
         const name = row.querySelector('input[name="participantName[]"]').value;
-        const email = row.querySelector('input[name="participantEmail[]"]').value;
+        //const email = row.querySelector('input[name="participantEmail[]"]').value;
         const task = row.querySelector('input[name="participantTask[]"]').value;
 
         if (!name) row.querySelectorAll('.error-message')[0].style.display = 'block', isValid = false;
-        if (!email) row.querySelectorAll('.error-message')[1].style.display = 'block', isValid = false;
+        //if (!email) row.querySelectorAll('.error-message')[1].style.display = 'block', isValid = false;
         if (!task) row.querySelectorAll('.error-message')[2].style.display = 'block', isValid = false;
     });
 
@@ -209,12 +205,12 @@ createMeetingForm.addEventListener('submit', async (e) => {
         code: meetingId,
         participantDetails: Array.from(participantRows).map(row => ({
             assignee: row.querySelector('input[name="participantName[]"]').value,
-            email: row.querySelector('input[name="participantEmail[]"]').value,
+            //email: row.querySelector('input[name="participantEmail[]"]').value,
             task: row.querySelector('input[name="participantTask[]"]').value
         })),
         managerDetails: {
             name: managerName,
-            email: managerEmail
+            //email: managerEmail
         }
     };
 
@@ -226,13 +222,13 @@ createMeetingForm.addEventListener('submit', async (e) => {
     //     });
 
     //     const result = await response.json();
-        
+
     //     if (!response.ok) throw new Error(result.message || 'Request failed');
 
     //     showAlert("Success", result.message, true);
     //     closeAllModals();
     //     clearFormFields();
-        
+
     // } catch (error) {
     //     showAlert("Error", error.message, false);
     //     console.error('Error:', error);
@@ -247,25 +243,28 @@ createMeetingForm.addEventListener('submit', async (e) => {
         // Make the fetch request
         const response = await fetch('http://20.197.38.23:7700/gmeet/standup', {
             method: 'POST',
-            headers: { 
+            headers: {
                 'Content-Type': 'application/json',
                 'Connection': 'keep-alive'
             },
             body: JSON.stringify(meetingData),
             signal: controller.signal,
             mode: 'cors' // Explicitly set CORS mode
-        }).finally(() => clearTimeout(timeoutId)); // Clean up timeout
-
+        }).finally(() => { clearTimeout(timeoutId); console.log('test.4..'); }); // Clean up timeout
+        console.log('test1...');
         if (!response.ok) {
             throw new Error(`HTTP error! status: ${response.status}`);
         }
-
+        console.log('test...');
         const result = await response.json();
-        showAlert("Success", result.message || "Meeting scheduled successfully!", true);
-        
+        alert(result.message || "Meeting scheduled successfully!");
+        closeAllModals();
+        clearFormFields();
+        //showAlert("Success", result.message || "Meeting scheduled successfully!", true);
+
     } catch (error) {
         let errorMessage = "An error occurred";
-        
+
         if (error.name === 'AbortError') {
             errorMessage = "The request timed out. Please check your network connection.";
         } else if (error.message.includes('Failed to fetch')) {
@@ -276,7 +275,7 @@ createMeetingForm.addEventListener('submit', async (e) => {
 
         showAlert("Error", errorMessage, false);
         console.error('API Error:', error);
-        
+
     }
 });
 
