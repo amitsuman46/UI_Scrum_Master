@@ -3,13 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ScrumSage - AI for Agile Workflows</title>
+    <title>Meeting Management Platform</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
-    <!-- SheetJS for Excel parsing -->
+    <!-- Font Awesome for icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- SheetJS for Excel import -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
-        /* Custom styles for modal backdrop */
+        /* Custom styles for active tab */
+        .tab-active {
+            color: #7b1fa2; /* Purple for active tab */
+            border-bottom: 2px solid #7b1fa2;
+        }
+        /* Custom styles for modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal.active {
+            display: flex;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 24px;
+            border-radius: 12px;
+            width: 90%;
+            max-width: 600px;
+            position: relative;
+            max-height: 80vh;
+            overflow-y: auto;
+        }
+        .modal-close {
+            position: absolute;
+            top: 16px;
+            right: 16px;
+            cursor: pointer;
+            color: #7b1fa2; /* Purple for close icon */
+        }
+        /* Modal backdrop */
         .modal-backdrop {
             display: none;
             position: fixed;
@@ -17,206 +56,617 @@
             left: 0;
             width: 100%;
             height: 100%;
-            background: rgba(0, 0, 0, 0.5);
-            z-index: 10;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 999;
         }
-        .modal {
-            display: none;
-            position: fixed !important;
-            top: 60%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 20;
-        }
-        .modal.active, .modal-backdrop.active {
+        .modal-backdrop.active {
             display: block;
         }
-
-        .close-btn {
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            cursor: pointer;
-            font-size: 1.5rem;
+        /* Ensure content doesn't overlap with fixed navbar */
+        section {
+            padding-top: 5rem !important;
+            padding-left: 1.5rem !important;
+            padding-right: 3rem !important;
         }
+        /* Error message styling */
         .error-message {
-            color: red;
-            font-size: 0.875rem;
-            margin-top: 0.25rem;
+            color: #e3342f;
             display: none;
         }
-        /* Add to your existing styles */
-        #alertModal {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 30;
+        /* User journey step styling */
+        .step-container {
+            display: flex;
+            align-items: center;
+            gap: 2rem;
+            margin-bottom: 2rem;
+            padding: 1rem;
+            background-color: #f9fafb;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
-        header {
-            position: fixed;
-            top: 0;
-            left: 0;
+        .step-image {
+            flex: 1;
+            max-width: 300px;
+        }
+        .step-image img {
             width: 100%;
-            background: white; /* Ensures background is visible */
-            z-index: 1000; /* Ensures it stays above other elements */
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1); /* Optional: Adds a slight shadow */
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
-        body {
-        padding-top: 60px; /* Prevents content from hiding behind the fixed header */
+        .step-content {
+            flex: 2;
         }
-    </style></head>
-<body class="font-sans text-gray-800" background="./background2.svg"></body>
-    <!-- Header -->
-
-      <header class="flex justify-between items-center p-4 border-b">
-        <div class="flex flex-col">
-          <!-- Main title -->
-          <div class="text-2xl font-bold text-purple-600">StandUpLens</div>
-          
-          <!-- Subtitle with upward adjustment -->
-          <div class="flex justify-end -mt-1">  
-            <span class="text-sm font-medium text-gray-600">& MeetingPilot</span>
-          </div>
-        </div>
-      </header>
-
-    <!-- Hero Section -->
-    <section class="text-center py-16">
-        <h2 class="text-5xl font-bold leading-tight">
-            AI runs your stand-ups and analyzes your meetings,<br>So You Don’t Have To.
-        </h2>
-        <p class="text-gray-500 mt-4">
-            Your meetings, AI-fied and amplified. Step aside, AI’s here to vibe.
-        </p>
-        <button id="createMeetingBtn" class="mt-6 px-6 py-2 bg-purple-600 text-white rounded-full hover:bg-purple-700">
-            Run Stand-Up with AI
-        </button>
-        <div class="mt-8 max-w-4xl mx-auto">
-            <img src="./meeting_room.png" alt="Meeting Room" class="w-full h-64 object-cover rounded-lg">
-        </div>
-    </section>
-
+        .step-content h3 {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: #7b1fa2;
+            margin-bottom: 0.5rem;
+        }
+        .step-content ul {
+            list-style-type: disc;
+            padding-left: 1.5rem;
+        }
+        .step-content ul li {
+            margin-bottom: 0.5rem;
+            color: #4b5563;
+        }
+        .important-note {
+            color: #e3342f;
+            font-weight: bold;
+        }
+        /* Grid layout for all card sections */
+        .grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 1.5rem;
+            padding: 0 1.5rem;
+        }
+        .grid-card {
+            background-color: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 0.5rem;
+            padding: 1.5rem;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            text-align: center;
+        }
+        .grid-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+<body class="font-sans text-gray-800" background="./background2.svg">
     <!-- Modal Backdrop -->
     <div id="modalBackdrop" class="modal-backdrop"></div>
 
-    <!-- Modal for Creating a New Meeting -->
-    <div id="createMeetingModal" class="modal bg-white p-6 rounded-lg shadow-lg w-full max-w-lg relative">
-        <span id="closeCreateMeetingModalBtn" class="close-btn">✖</span>
-        <h2 class="text-2xl font-bold mb-4">Configure Your AI Scrum Master</h2>
-        <form id="createMeetingForm">
-            <div class="mb-4">
-                <label class="block text-gray-700 mb-2">Meeting Code</label>
-                <input type="text" name="meetingId" placeholder="Enter meeting code (e.g., zpf-nfic-hjv)" class="w-full p-2 border rounded" required>
-                <p class="error-message" id="meetingIdError">Meeting code is required.</p>
-            </div>
-            <div class="mb-4">
-                <label class="block text-gray-700 mb-2">Manager Details</label>
-                <div class="grid grid-cols-2 gap-2">
-                    <div>
-                        <input type="text" name="managerName" placeholder="Enter name" class="w-full p-2 border rounded" required>
-                        <p class="error-message" id="managerNameError">Manager name is required.</p>
-                    </div>
-                    <div>
-                        <input type="email" name="managerEmail" placeholder="Enter email" class="w-full p-2 border rounded" required>
-                        <p class="error-message" id="managerEmailError">Email is required.</p>
-                    </div>
-                </div>
-            </div>
-            <div class="mb-4">
-                <div class="flex justify-between items-center mb-4">
-                    <label class="block text-gray-700">Participants</label>
-                    <button type="button" onclick="importParticipants()" class="bg-purple-600 text-white px-4 py-2 rounded-full hover:bg-purple-700">Import from Excel</button>
-                </div>
-                <div id="participantsContainer">
-                </div>
-            </div>
-            <button type="button" id="addParticipantBtn" class="text-purple-600 mb-4">+ Add Participant</button>
-            <div class="text-right">
-                <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded w-full hover:bg-purple-700">Start Stand-Up Session</button>
-            </div>
-        </form>
-    </div>
-
-    <!-- Modal for Sign In -->
-    <div id="signInModal" class="modal bg-white p-6 rounded-lg shadow-lg w-full max-w-lg relative">
-        <span id="closeSignInModalBtn" class="close-btn">✖</span>
-        <h2 class="text-2xl font-bold mb-4">Sign In</h2>
-        <form id="signInForm">
-            <div class="mb-4">
-                <label class="block text-gray-700 mb-2">Email</label>
-                <input type="email" name="email" placeholder="Enter email" class="w-full p-2 border rounded" required>
-                <p class="error-message" id="signInEmailError">Email is required.</p>
-            </div>
-            <div class="mb-4">
-                <label class="block text-gray-700 mb-2">Password</label>
-                <input type="password" name="password" placeholder="Enter password" class="w-full p-2 border rounded" required>
-                <p class="error-message" id="signInPasswordError">Password is required.</p>
-            </div>
-            <div class="text-right">
-                <button type="submit" class="px-4 py-2 bg-purple-600 text-white rounded w-full hover:bg-purple-700">Sign In</button>
-            </div>
-        </form>
-    </div>
-
-    <!-- Transform Section -->
-    <section class="py-16 flex flex-col md:flex-row items-center max-w-5xl mx-auto">
-        <div class="md:w-1/2">
-            <h2 class="text-3xl font-bold mb-4">Transform Your Agile Workflow</h2>
-            <ul class="space-y-2">
-                <li class="flex items-center">
-                    <span class="text-purple-600 pl-4 mr-2">🎙️</span> Real-time Speech Recognition<br>Captures every word through advanced speech-to-text technology
-                </li>
-                <li class="flex items-center">
-                    <span class="text-purple-600 pl-4 mr-2">🤖</span> AI-Powered Insights<br>Smart analysis of team trends and performance metrics
-                </li>
-                <li class="flex items-center">
-                    <span class="text-purple-600 pl-4 mr-2">📝</span> Automated Documentation<br>Instant summaries and PowerPoint generation
-                </li>
-            </ul>
+    <!-- Navbar -->
+    <nav class="fixed top-0 w-full h-16 bg-white shadow-md flex justify-between items-center px-12 z-10">
+        <div class="logo cursor-pointer" onclick="showTab('main')">
+            <span class="text-2xl font-bold text-purple-700">ScrumSage</span>
         </div>
-        <div class="md:w-1/2 mt-6 md:mt-0">
-            <img src="./robut_analytics.png" alt="Robot Analytics" class="w-full h-64 object-cover rounded-lg">
+        <ul class="flex gap-8">
+            <li><a href="#features" class="text-gray-700 hover:text-purple-700 tab-active" onclick="showTab('features')">Features</a></li>
+            <li><a href="#get-started" class="text-gray-700 hover:text-purple-700" onclick="showTab('get-started')">Get Started</a></li>
+            <li><a href="#about" class="text-gray-700 hover:text-purple-700" onclick="showTab('about')">About Us</a></li>
+            <li><a href="#effectiveness" class="text-gray-700 hover:text-purple-700" onclick="showTab('effectiveness')">Effectiveness</a></li>
+        </ul>
+    </nav>
+
+    <marquee style="color:red;" behavior="scroll" direction="left">
+        **Use your network and connect FortiClient VPN for AI Standup bot server access, or try mobile.**
+    </marquee>
+
+    <!-- Main Page -->
+   <!-- Main Page - Improved Home Tab -->
+<section id="main" class="min-h-[calc(100vh-64px)] relative bg-gradient-to-br from-purple-50 to-white">
+    <div class="container mx-auto px-6 py-16 flex flex-col lg:flex-row items-center">
+      <!-- Left Column - Content -->
+      <div class="lg:w-1/2 mb-12 lg:mb-0 lg:pr-12">
+        <div class="max-w-lg">
+          <!-- Badge -->
+          <span class="inline-block bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-sm font-semibold mb-4">
+            AI-Powered Standups
+          </span>
+          <!-- Headline -->
+          <h1 class="text-4xl md:text-5xl font-bold text-gray-900 mb-6 leading-tight">
+            AI runs your stand-ups, <br class="hidden lg:block"> 
+            <span class="text-purple-600">So You Don't Have To.</span>
+          </h1>
+          
+          <!-- Subheadline -->
+          <p class="text-lg text-gray-600 mb-8">
+            Your meetings, AI-fied and amplified. Step aside, AI's here to vibe.
+          </p>
+          
+          <!-- CTA Buttons -->
+          <div class="flex flex-col sm:flex-row gap-4">
+            <button onclick="showTab('get-started')" 
+                    class="bg-purple-600 hover:bg-purple-700 text-white px-8 py-4 rounded-lg transition-all transform hover:-translate-y-1 shadow-lg hover:shadow-xl">
+              <div class="flex items-center justify-center">
+                <span>Get Started</span>
+                <i class="fas fa-arrow-right ml-2"></i>
+              </div>
+            </button>
+            
+            <button onclick="showTab('features')" 
+                    class="border-2 border-purple-600 text-purple-600 hover:bg-purple-50 px-8 py-4 rounded-lg transition">
+              <div class="flex items-center justify-center">
+                <i class="fas fa-play-circle mr-2"></i>
+                <span>Know More</span>
+              </div>
+            </button>
+          </div>
+          
+          <!-- Trust Indicators -->
+          
+        </div>
+      </div>
+      
+      <!-- Right Column - Visual -->
+      <div class="lg:w-1/2 relative">
+        <!-- Hero Image Container -->
+        <div class="relative">
+          <!-- Main Image -->
+          <img src="robut_analytics.png" alt="AI Assistant managing standup meeting" 
+               class="w-full max-w-xl rounded-xl shadow-2xl border-8 border-white transform rotate-1 hover:rotate-0 transition">
+          
+          <!-- Floating Card 1 -->
+          <div class="absolute -bottom-6 -left-6 bg-white p-4 rounded-lg shadow-lg border border-gray-100 w-64 transform hover:scale-105 transition">
+            <div class="flex items-start">
+              <div class="bg-purple-100 p-2 rounded-full mr-3">
+                <i class="fas fa-check text-purple-600"></i>
+              </div>
+              <div>
+                <h4 class="font-semibold text-gray-900">Automated Notes</h4>
+                <p class="text-sm text-gray-500">Never miss an action item</p>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Floating Card 2 -->
+          <div class="absolute -top-6 -right-6 bg-white p-4 rounded-lg shadow-lg border border-gray-100 w-64 transform hover:scale-105 transition">
+            <div class="flex items-start">
+              <div class="bg-blue-100 p-2 rounded-full mr-3">
+                <i class="fas fa-chart-line text-blue-600"></i>
+              </div>
+              <div>
+                <h4 class="font-semibold text-gray-900">Progress Tracking</h4>
+                <p class="text-sm text-gray-500">Visualize team velocity</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+    
+    <!-- Stats Bar -->
+    <div class="bg-purple-600 py-8 mt-16">
+      <div class="container mx-auto px-6">
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-6 text-center">
+          <div class="text-white">
+            <div class="text-3xl font-bold mb-2">52+</div>
+            <div class="text-purple-100 text-sm">Hours Saved Monthly</div>
+          </div>
+          <div class="text-white">
+            <div class="text-3xl font-bold mb-2">100%</div>
+            <div class="text-purple-100 text-sm">Meeting Accuracy</div>
+          </div>
+          <div class="text-white">
+            <div class="text-3xl font-bold mb-2">80%</div>
+            <div class="text-purple-100 text-sm">Effort Reduced</div>
+          </div>
+          <div class="text-white">
+            <div class="text-3xl font-bold mb-2">24/7</div>
+            <div class="text-purple-100 text-sm">AI Availability</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+   <!-- Get Started Tab - Improved Version -->
+<section id="get-started" class="py-16 bg-gray-50 hidden">
+    <div class="container mx-auto px-6">
+      <!-- Header Section -->
+      <div class="text-center max-w-3xl mx-auto mb-16">
+        <span class="inline-block bg-purple-100 text-purple-800 px-4 py-1 rounded-full text-sm font-semibold mb-4">
+          Quick Start Guide
+        </span>
+        <h2 class="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+          Get Your AI Scrum Master Running in Minutes
+        </h2>
+        <p class="text-lg text-gray-600">
+          Follow these simple steps to automate your standup meetings. Our AI assistant handles the rest!
+        </p>
+      </div>
+  
+      <!-- Steps Timeline -->
+      <div class="relative">
+        <!-- Timeline line -->
+        <div class="hidden md:block absolute left-1/2 top-0 bottom-0 w-1 bg-purple-100 transform -translate-x-1/2"></div>
+        
+        <!-- Step 1 -->
+        <div class="relative mb-16 md:flex items-center">
+          <div class="md:w-1/2 md:pr-12 mb-8 md:mb-0 md:text-right">
+            <div class="inline-block bg-white p-6 rounded-xl shadow-md border border-gray-100">
+              <img src="pic0.jpg" alt="Google Meet setup" class="rounded-lg mb-4 w-full">
+              <img src="pic1.jpg" alt="Meeting link example" class="rounded-lg w-full">
+            </div>
+          </div>
+          
+          <div class="md:w-1/2 md:pl-12">
+            <div class="flex items-center md:justify-start justify-center mb-4">
+              <div class="flex items-center justify-center w-12 h-12 rounded-full bg-purple-600 text-white font-bold text-xl mr-4">
+                1
+              </div>
+              <h3 class="text-2xl font-bold text-gray-900">Create Your Meeting</h3>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+              <ul class="space-y-3 text-gray-700">
+                <li class="flex items-start">
+                  <i class="fas fa-check-circle text-purple-500 mt-1 mr-2"></i>
+                  <span>Go to <a href="https://meet.google.com" target="_blank" class="text-purple-600 hover:underline font-medium">meet.google.com</a></span>
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-check-circle text-purple-500 mt-1 mr-2"></i>
+                  <span>Click "New meeting" → "Create meeting for later"</span>
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-check-circle text-purple-500 mt-1 mr-2"></i>
+                  <span>Copy the meeting link (e.g., <code class="bg-gray-100 px-2 py-1 rounded">https://meet.google.com/abc-xyz-123</code>)</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+  
+        <!-- Step 2 -->
+        <div class="relative mb-16 md:flex items-center flex-row-reverse">
+          <div class="md:w-1/2 md:pl-12 mb-8 md:mb-0">
+            <div class="inline-block bg-white p-6 rounded-xl shadow-md border border-gray-100">
+              <img src="pic2.jpg" alt="Meeting configuration" class="rounded-lg w-full">
+            </div>
+          </div>
+          
+          <div class="md:w-1/2 md:pr-12">
+            <div class="flex items-center md:justify-end justify-center mb-4">
+              <div class="flex items-center justify-center w-12 h-12 rounded-full bg-purple-600 text-white font-bold text-xl mr-4">
+                2
+              </div>
+              <h3 class="text-2xl font-bold text-gray-900">Configure Your Meeting</h3>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+              <ul class="space-y-3 text-gray-700">
+                <li class="flex items-start">
+                  <i class="fas fa-check-circle text-purple-500 mt-1 mr-2"></i>
+                  <span>Paste your Google Meet link in our dashboard</span>
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-check-circle text-purple-500 mt-1 mr-2"></i>
+                  <span>Add manager details and team members</span>
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-check-circle text-purple-500 mt-1 mr-2"></i>
+                  <span>Set your preferred meeting time and duration</span>
+                </li>
+              </ul>
+            </div>
+          </div>
+        </div>
+  
+        <!-- Step 3 -->
+        <div class="relative md:flex items-center">
+          <div class="md:w-1/2 md:pr-12 mb-8 md:mb-0 md:text-right">
+            <div class="inline-block bg-white p-6 rounded-xl shadow-md border border-gray-100">
+              <img src="pic3.jpg" alt="Bot in meeting" class="rounded-lg w-full">
+            </div>
+          </div>
+          
+          <div class="md:w-1/2 md:pl-12">
+            <div class="flex items-center md:justify-start justify-center mb-4">
+              <div class="flex items-center justify-center w-12 h-12 rounded-full bg-purple-600 text-white font-bold text-xl mr-4">
+                3
+              </div>
+              <h3 class="text-2xl font-bold text-gray-900">Run Your Standup</h3>
+            </div>
+            <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-100">
+              <ul class="space-y-3 text-gray-700">
+                <li class="flex items-start">
+                  <i class="fas fa-check-circle text-purple-500 mt-1 mr-2"></i>
+                  <span>Our AI bot will join the meeting automatically</span>
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-check-circle text-purple-500 mt-1 mr-2"></i>
+                  <span>Participants will be prompted when it's their turn</span>
+                </li>
+                <li class="flex items-start">
+                  <i class="fas fa-check-circle text-purple-500 mt-1 mr-2"></i>
+                  <span>Get automated summaries and action items afterward</span>
+                </li>
+              </ul>
+              
+              <div class="mt-6 p-4 bg-purple-50 rounded-lg border border-purple-100">
+                <h4 class="font-semibold text-purple-800 flex items-center mb-2">
+                  <i class="fas fa-lightbulb mr-2"></i> Pro Tip
+                </h4>
+                <p class="text-sm text-purple-700">
+                  Keep yourself muted until prompted. The bot will call on each participant by name when it's their turn.
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+  
+      <!-- CTA Section -->
+      <div class="mt-20 text-center">
+        <h3 class="text-2xl font-bold text-gray-900 mb-6">Ready to Transform Your Standups?</h3>
+        <button id="createMeetingBtn" 
+                class="bg-purple-600 hover:bg-purple-700 text-white px-10 py-4 rounded-lg transition-all transform hover:-translate-y-1 shadow-lg hover:shadow-xl text-lg font-medium">
+          <div class="flex items-center justify-center">
+            <i class="fas fa-rocket mr-3"></i>
+            <span>Run Stand-Up with AI</span>
+          </div>
+        </button>
+        
+        <div class="mt-6 flex items-center justify-center">
+          <div class="flex items-center text-sm text-gray-500">
+            <i class="fas fa-clock mr-2"></i>
+            <span>Average setup time: 3 minutes</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+    <!-- Features Tab -->
+    <section id="features" class="py-12 hidden">
+        <h2 class="text-3xl font-bold text-gray-900 text-center mb-8">Key Features</h2>
+        <div class="grid-container">
+            <!-- Feature 1 -->
+            <div class="grid-card">
+                <i class="fas fa-users text-5xl text-purple-600 mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Real-time Collaboration</h3>
+                <p class="text-sm text-gray-500">Work together seamlessly with live updates and shared tools.</p>
+            </div>
+            <!-- Feature 2 -->
+            <div class="grid-card">
+                <i class="fas fa-calendar-alt text-5xl text-purple-600 mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Meeting Scheduler</h3>
+                <p class="text-sm text-gray-500">Easily schedule meetings with integrated calendar tools.</p>
+            </div>
+            <!-- Feature 3 -->
+            <div class="grid-card">
+                <i class="fas fa-video text-5xl text-purple-600 mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Secure Video Calls</h3>
+                <p class="text-sm text-gray-500">Host encrypted video meetings with crystal-clear quality.</p>
+            </div>
+            <!-- Feature 4 -->
+            <div class="grid-card">
+                <i class="fas fa-users-cog text-5xl text-purple-600 mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Seamless Meeting Integration</h3>
+                <p class="text-sm text-gray-500">Joins Google Meet or Microsoft Teams, retrieves attendees, and adjusts interactions for timely engagement.</p>
+            </div>
+            <!-- Feature 5 -->
+            <div class="grid-card">
+                <i class="fas fa-tasks text-5xl text-purple-600 mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Scrum Board Integration</h3>
+                <p class="text-sm text-gray-500">Integrates with ServiceNow, JIRA, and other scrum boards to fetch tasks in real time.</p>
+            </div>
+            <!-- Feature 6 -->
+            <div class="grid-card">
+                <i class="fas fa-comments text-5xl text-purple-600 mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Interactive Task Tracking</h3>
+                <p class="text-sm text-gray-500">Engages participants by asking about tasks, blockers, and updates in a conversational manner.</p>
+            </div>
+            <!-- Feature 7 -->
+            <div class="grid-card">
+                <i class="fas fa-microphone text-5xl text-purple-600 mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Real-time Speech Processing</h3>
+                <p class="text-sm text-gray-500">Leverages Vosk for speech-to-text (STT) transcription and says for text-to-speech (TTS) conversion, replying audibly.</p>
+            </div>
+            <!-- Feature 8 -->
+            <div class="grid-card">
+                <i class="fas fa-file-alt text-5xl text-purple-600 mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Intelligent Summary Generation</h3>
+                <p class="text-sm text-gray-500">Analyzes responses to create concise, structured summaries and generates detailed meeting minutes.</p>
+            </div>
+        </div>
+
+        <!-- Future Enhancements Roadmap -->
+        <h2 class="text-3xl font-bold text-gray-900 text-center mb-8 mt-16">Future Enhancements Roadmap</h2>
+        <div class="grid-container">
+            <!-- Phase 1 -->
+            <div class="grid-card">
+                <div class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs font-semibold mb-3 w-fit">Phase 1 (Weeks 1-4)</div>
+                <i class="fas fa-plug text-4xl text-purple-600 mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Platform Integration</h3>
+                <p class="text-sm text-gray-500 mb-2">Integrate with popular communication platforms for seamless meeting joining and analysis.</p>
+                <div class="text-xs text-gray-400 mt-4">Estimated: 4 weeks</div>
+            </div>
+            
+            <!-- Phase 2 -->
+            <div class="grid-card">
+                <div class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs font-semibold mb-3 w-fit">Phase 2 (Weeks 5-8)</div>
+                <i class="fas fa-robot text-4xl text-purple-600 mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Autonomous Meetings</h3>
+                <p class="text-sm text-gray-500 mb-2">Enable the bot to autonomously join scheduled meetings without manual intervention.</p>
+                <div class="text-xs text-gray-400 mt-4">Estimated: 4 weeks</div>
+            </div>
+            
+            <!-- Phase 3 -->
+            <div class="grid-card">
+                <div class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs font-semibold mb-3 w-fit">Phase 3 (Weeks 9-12)</div>
+                <i class="fas fa-project-diagram text-4xl text-purple-600 mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Scrum Board API</h3>
+                <p class="text-sm text-gray-500 mb-2">Integrate with scrum boards via API for real-time task information and updates.</p>
+                <div class="text-xs text-gray-400 mt-4">Estimated: 4 weeks</div>
+            </div>
+            
+            <!-- Phase 4 -->
+            <div class="grid-card">
+                <div class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs font-semibold mb-3 w-fit">Phase 4 (Weeks 13-16)</div>
+                <i class="fas fa-clock text-4xl text-purple-600 mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Async Standups</h3>
+                <p class="text-sm text-gray-500 mb-2">Implement asynchronous standups with flexible update windows.</p>
+                <div class="text-xs text-gray-400 mt-4">Estimated: 4 weeks</div>
+            </div>
+            
+            <!-- Phase 5 -->
+            <div class="grid-card">
+                <div class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs font-semibold mb-3 w-fit">Phase 5 (Weeks 17-20)</div>
+                <i class="fas fa-comments text-4xl text-purple-600 mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Chatbot UI</h3>
+                <p class="text-sm text-gray-500 mb-2">Develop meeting history UI and conversational chatbot interface.</p>
+                <div class="text-xs text-gray-400 mt-4">Estimated: 4 weeks</div>
+            </div>
+            
+            <!-- Phase 6 -->
+            <div class="grid-card">
+                <div class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full text-xs font-semibold mb-3 w-fit">Phase 6 (Weeks 21-24)</div>
+                <i class="fas fa-calendar-check text-4xl text-purple-600 mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Manager Scheduling</h3>
+                <p class="text-sm text-gray-500 mb-2">Enable managers to schedule automated team update meetings.</p>
+                <div class="text-xs text-gray-400 mt-4">Estimated: 4 weeks</div>
+            </div>
         </div>
     </section>
 
-    <!-- Features Section (Future Developments) -->
-    <section class="py-16">
-        <h2 class="text-4xl font-bold text-center mb-4">Evolving Agile Intelligence</h2>
-        <p class="text-center text-gray-500 mb-8">The future of Agile meetings is here, and it’s getting smarter every day.</p>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            <div class="p-6 bg-white rounded-lg shadow-md">
-                <div class="text-purple-600 text-3xl mb-4">🤖</div>
-                <h3 class="text-xl font-semibold mb-2">Smart Chatbot Integration</h3>
-                <p class="text-gray-600">Access past stand-ups and get instant insights through the AI-powered chatbot.</p>
+    <!-- About Us Tab -->
+    <section id="about" class="py-12 hidden">
+        <h2 class="text-3xl font-bold text-gray-900 text-center mb-8">Meet Our Team</h2>
+        <div class="grid-container">
+            <!-- Team Member 1 -->
+            <div class="grid-card">
+                <i class="fas fa-user-tie text-5xl text-purple-600 mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-900 mb-1">Sudpita</h3>
+                <p class="text-sm text-gray-500 mb-2">Architecture Head</p>
+                <p class="text-sm text-gray-500">Leads the technical vision and ensures scalable solutions for seamless meeting experiences.</p>
             </div>
-            <div class="p-6 bg-white rounded-lg shadow-md">
-                <div class="text-purple-600 text-3xl mb-4">🛠️</div>
-                <h3 class="text-xl font-semibold mb-2">Seamless Integration</h3>
-                <p class="text-gray-600">Direct sync with Jira and ServiceNow for real-time task tracking and updates.</p>
+            <!-- Team Member 2 -->
+            <div class="grid-card">
+                <i class="fas fa-user-tie text-5xl text-purple-600 mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-900 mb-1">Rajkumar</h3>
+                <p class="text-sm text-gray-500 mb-2">Team Lead</p>
+                <p class="text-sm text-gray-500">Guides the team with expertise, ensuring timely delivery and high-quality outcomes.</p>
             </div>
-            <div class="p-6 bg-white rounded-lg shadow-md">
-                <div class="text-purple-600 text-3xl mb-4">📈</div>
-                <h3 class="text-xl font-semibold mb-2">Predictive Analytics</h3>
-                <p class="text-gray-600">Data-driven insights to predict and prevent team bottlenecks before they occur.</p>
+            <!-- Team Member 3 -->
+            <div class="grid-card">
+                <i class="fas fa-code text-5xl text-purple-600 mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-900 mb-1">Amit</h3>
+                <p class="text-sm text-gray-500 mb-2">Developer</p>
+                <p class="text-sm text-gray-500">Crafts robust features to enhance the platform's functionality and user experience.</p>
+            </div>
+            <!-- Team Member 4 -->
+            <div class="grid-card">
+                <i class="fas fa-code text-5xl text-purple-600 mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-900 mb-1">Pavan</h3>
+                <p class="text-sm text-gray-500 mb-2">Developer</p>
+                <p class="text-sm text-gray-500">Builds innovative solutions to streamline meeting management processes.</p>
+            </div>
+            <!-- Team Member 5 -->
+            <div class="grid-card">
+                <i class="fas fa-pen-fancy text-5xl text-purple-600 mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-900 mb-1">Likitha</h3>
+                <p class="text-sm text-gray-500 mb-2">Content Creator & Presenter</p>
+                <p class="text-sm text-gray-500">Creates engaging content and presents our platform's value to the world.</p>
             </div>
         </div>
     </section>
 
-    <!-- Custom Alert Modal -->
-    <div id="alertModal" class="modal bg-white p-6 rounded-lg shadow-lg w-full max-w-md relative">
-        <div class="flex justify-between items-center mb-4">
-            <h3 id="alertTitle" class="text-xl font-bold">Alert</h3>
-            <span id="closeAlertBtn" class="close-btn">✖</span>
+    <!-- Effectiveness Tab -->
+    <section id="effectiveness" class="py-12 hidden">
+        <h2 class="text-3xl font-bold text-gray-900 text-center mb-8">Our Effectiveness</h2>
+        <div class="grid-container">
+            <!-- Card 1: Time Savings -->
+            <div class="grid-card">
+                <i class="fas fa-clock text-5xl text-purple-600 mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">52 Hours Saved Monthly</h3>
+                <p class="text-sm text-gray-500">Reduces manual work from 60 to 8 hours per month, saving 52 hours.</p>
+            </div>
+            <!-- Card 2: Cost Savings -->
+            <div class="grid-card">
+                <i class="fas fa-dollar-sign text-5xl text-purple-600 mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">$2,000 Monthly Savings</h3>
+                <p class="text-sm text-gray-500">Cuts costs from $2,400 to $400 per month with automation.</p>
+            </div>
+            <!-- Card 3: Cost Efficiency -->
+            <div class="grid-card">
+                <i class="fas fa-percentage text-5xl text-purple-600 mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">80% Effort Reduction</h3>
+                <p class="text-sm text-gray-500">Replaces ~80% of manual effort in daily ceremonies.</p>
+            </div>
+            <!-- Card 4: Time-to-Value -->
+            <div class="grid-card">
+                <i class="fas fa-rocket text-5xl text-purple-600 mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">2-3 Days Setup</h3>
+                <p class="text-sm text-gray-500">Bot can be set up and operational in just 2-3 days.</p>
+            </div>
+            <!-- Card 5: Scalability -->
+            <div class="grid-card">
+                <i class="fas fa-expand-arrows-alt text-5xl text-purple-600 mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">Scales to Multiple Teams</h3>
+                <p class="text-sm text-gray-500">Linearly scales with minimal infrastructure cost.</p>
+            </div>
+            <!-- Card 6: Accuracy -->
+            <div class="grid-card">
+                <i class="fas fa-check-circle text-5xl text-purple-600 mb-4"></i>
+                <h3 class="text-lg font-medium text-gray-900 mb-2">100% Accuracy</h3>
+                <p class="text-sm text-gray-500">AI-driven summaries and minutes ensure no detail is missed.</p>
+            </div>
         </div>
-        <p id="alertMessage">Message goes here</p>
-        <div class="mt-4 text-right">
-            <button id="confirmAlertBtn" class="px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">OK</button>
+    </section>
+
+    <!-- Create Meeting Modal -->
+    <div id="createMeetingModal" class="modal">
+        <div class="modal-content">
+            <span id="closeCreateMeetingModalBtn" class="modal-close text-2xl text-purple-600 cursor-pointer">×</span>
+            <h2 class="text-2xl font-bold text-gray-900 mb-6">Configure Your AI Scrum Master</h2>
+            <form id="createMeetingForm">
+                <div class="mb-4">
+                    <label class="block text-gray-700 font-medium mb-2">Meeting Code</label>
+                    <input type="text" name="meetingId" placeholder="Enter meeting code (e.g., zpf-nfic-hyv)" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600">
+                    <p id="meetingIdError" class="error-message text-xs mt-1">Meeting code is required.</p>
+                </div>
+                <div class="mb-4">
+                    <label class="block text-gray-700 font-medium mb-2">Manager Details</label>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <input type="text" name="managerName" placeholder="Enter name" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600">
+                            <p id="managerNameError" class="error-message text-xs mt-1">Name is required.</p>
+                        </div>
+                        <div>
+                            <input type="email" name="managerEmail" placeholder="Enter email" class="w-full p-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-600">
+                            <p id="managerEmailError" class="error-message text-xs mt-1">Email is required.</p>
+                        </div>
+                        
+                    </div>
+                </div>
+                <div class="mb-6">
+                    <label class="block text-gray-700 font-medium mb-2">Participants</label>
+                    <div id="participantsContainer" class="mb-4"></div>
+                    <button type="button" id="addParticipantBtn" class="text-purple-600 hover:text-purple-700 mb-2">+ Add Participant</button>
+                    <button type="button" onclick="importParticipants()" class="bg-purple-600 text-white px-4 py-2 rounded-full hover:bg-purple-700 transition float-right">Import from Excel</button>
+                </div>
+                <button type="submit" class="w-full bg-purple-600 text-white py-3 rounded-lg hover:bg-purple-700 transition">Run Stand-Up with AI</button>
+            </form>
         </div>
     </div>
 
-    <!-- JavaScript Reference -->
-    <script src="scripts.js"></script>
+    <!-- Alert Modal -->
+    <div id="alertModal" class="modal">
+        <div class="modal-content">
+            <h2 id="alertTitle" class="text-xl font-bold mb-4"></h2>
+            <p id="alertMessage" class="text-gray-600 mb-6"></p>
+            <div class="flex justify-end gap-4">
+                <button id="closeAlertBtn" class="text-gray-600 hover:text-gray-800">Cancel</button>
+                <button id="confirmAlertBtn" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 transition">OK</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Link to script.js -->
+    <script src="script.js"></script>
 </body>
 </html>
